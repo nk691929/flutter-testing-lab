@@ -49,4 +49,8 @@ void main() {
     //Assert
     expect(result, 4);
   });
+
+  test("division throw an argument error when divide by 0", () {
+    expect(() => division(2, 0), throwsArgumentError);
+  });
 }
