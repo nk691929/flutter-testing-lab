@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_testing_lab/lesson_01/calculator.dart';
 
 void main() {
-  test('Add return the sum of two numbers', () {
+  test('add returns the sum of two numbers', () {
     //Arrange
     const a = 2;
     const b = 3;
@@ -14,7 +14,7 @@ void main() {
     expect(result, 5);
   });
 
-  test('Subtract return the subtraction number', () {
+  test('subtract add returns the subtract of two numbers', () {
     //Arracnge
     const a = 9;
     const b = 5;
@@ -26,7 +26,7 @@ void main() {
     expect(result, 4);
   });
 
-  test("Multiply return the multiplied number", () {
+  test("multiply returns the multiply of two numbers", () {
     //Arracnge
     const a = 4;
     const b = 2;
@@ -38,15 +38,15 @@ void main() {
     expect(result, 8);
   });
 
-  test("Division, return the divided number", () {
+  test("division returns the division of two numbers", () {
     //Arracnge
-    const a = 4;
-    const b = 2;
+    const a = 12;
+    const b = 3;
 
     //Act
     final result = division(a, b);
 
     //Assert
-    expect(result, 2);
+    expect(result, 4);
   });
 }
