@@ -14,7 +14,7 @@ void main() {
     expect(result, 5);
   });
 
-  test('subtract add returns the subtract of two numbers', () {
+  test('subtract returns the subtract of two numbers', () {
     //Arracnge
     const a = 9;
     const b = 5;
