@@ -6,12 +6,21 @@ class FakeUserApi implements UserApi {
   Future<String> getUserName() async => 'Noshad';
 }
 
+class FailingUserApi implements UserApi {
+  @override
+  Future<String> getUserName() async => throw Exception('Server down');
+}
+
 void main() {
   late UserService userService;
+  late UserService failedUserService;
   late FakeUserApi api;
+  late FailingUserApi failedApi;
   setUp(() {
     api = FakeUserApi();
+    failedApi = FailingUserApi();
     userService = UserService(api);
+    failedUserService = UserService(failedApi);
   });
 
   group("UserService", () {
@@ -20,11 +29,8 @@ void main() {
       expect(result, 'Hello, Noshad');
     });
   });
+
+  test('greeting throws when the API fails', () async {
+    await expectLater(failedUserService.greeting(), throwsException);
+  });
 }
-
-// what problems would we have if UserService called the real server inside this test?
-
-// A real request is slow, and there are three more, which tie back to Lesson 1:
-// Flaky: if the internet is down, the test fails even though your code is fine.
-// Non-deterministic: the server’s data can change, so 'Noshad' might be 'Ahmad' tomorrow.
-// Can’t test failure on demand: you can’t ask a real server to crash whenever you want.
