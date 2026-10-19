@@ -13,5 +13,9 @@ void main() {
       final name = await repository.fetchUserName();
       expect(name, 'Noshad');
     });
+
+    test("fetchFailingUserName throws an exception", () async {
+      await expectLater(repository.fetchFailingUserName(), throwsException);
+    });
   });
 }
