@@ -26,5 +26,24 @@ void main() {
       expect(result, 'Noshad');
       verify(() => cache.save('Noshad')).called(1);
     });
+
+    test(('returns the cached name when the remote source fails'), () async {
+      when(() => remote.getUserName())
+          .thenAnswer((_) => throw Exception("Offline"));
+      when(() => cache.read()).thenAnswer((_) async => 'Cached Noshad');
+
+      final result = await repository.getUserName();
+
+      expect(result, 'Cached Noshad');
+      verify(() => cache.read()).called(1);
+    });
+
+    test("rethrows when the remote fails and the cache is empty", () async {
+      when(() => remote.getUserName())
+          .thenAnswer((_) => throw Exception('Offline'));
+      when(() => cache.read()).thenAnswer((_) async => null);
+
+      await expectLater(repository.getUserName(), throwsException);
+    });
   });
 }

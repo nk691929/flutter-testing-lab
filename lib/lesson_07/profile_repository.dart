@@ -4,6 +4,7 @@ abstract class UserRemoteSource {
 
 abstract class UserCache {
   Future<void> save(String name);
+  Future<String?> read();
 }
 
 class ProfileRepository {
@@ -12,7 +13,14 @@ class ProfileRepository {
   const ProfileRepository({required this._remote, required this._cache});
 
   Future<String> getUserName() async {
-    final name = await _remote.getUserName();
+    final String name;
+    try {
+      name = await _remote.getUserName();
+    } on Exception {
+      final cached = await _cache.read();
+      if (cached == null) rethrow;
+      return cached;
+    }
     await _cache.save(name);
     return name;
   }
