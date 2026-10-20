@@ -50,3 +50,42 @@ A: A fake is a replacement class I write by hand. A mock is created by a library
 
 **Q: When should I use `verify`?**
 A: When the call itself is the behavior, like saving to a database or sending an analytics event. For ordinary results I use `expect`, because verifying every call ties tests to how the code works inside and makes refactoring harder.
+
+
+
+## Lesson 07: Testing a repository (API plus cache)
+- Learned: A repository sits between the app and its data (a remote source and a local cache). To unit test it, I mock both helpers with mocktail and control what each returns. I tested three behaviors: (1) the happy path returns the remote name and saves it to the cache, (2) when the remote fails it returns the cached name, (3) when the remote fails and the cache is empty it rethrows the error.
+- Struggled with: I changed `read()` from `Future<String?>` to `Future<String>`, which removed the "nothing cached" case. Then I returned `''` for an empty cache. That hid the error, because the UI could not tell "server down and nothing saved" from a genuinely empty name. My `try` block also wrapped `_cache.save(name)`, so a failed save would have looked like a server failure.
+- Key insight: Never swallow an error by returning a fake default value. Let the error travel up with `rethrow;` so the state layer can show an error state. Keep the `try` block as narrow as possible, so it only catches the thing you expect to fail.
+
+### Interview Q&A
+**Q: How do you unit test a repository?**
+A: I inject mocks for its dependencies (remote source and cache) and test only the repository's own logic: what it returns, which dependencies it calls, and what it does when they fail. No real network or database is involved.
+
+**Q: Why use `verify` for the cache save but `expect` for the returned name?**
+A: The returned name is a value, so `expect` checks it. Saving to the cache is a side effect with no return value, so only `verify(...).called(1)` can prove it happened. When I deleted the save line, `expect` still passed and only `verify` failed.
+
+**Q: Why should `read()` return `String?` and not `String`?**
+A: `null` means "nothing cached". A non-nullable return type forces me to invent a fake value for the empty case, which hides real failures. With `String?`, the repository decides explicitly what to do with `null`.
+
+**Q: Why rethrow instead of returning an empty string?**
+A: A fake value gives the UI no way to show an error or a retry button. Rethrowing passes the real error up so the state layer can handle it.
+
+**Q: What is the difference between `rethrow;` and `throw e;`?**
+A: `rethrow;` passes the original error on with its original stack trace. `throw e;` throws a new error from the current line and loses the original stack trace, which makes debugging harder.
+
+**Q: Why catch `on Exception` and not everything?**
+A: `Exception` covers expected failures such as network errors. Catching everything would also swallow programming errors (`Error` types), which should crash loudly so I notice them.
+
+**Q: Why keep the `try` block narrow?**
+A: If it also wraps `_cache.save(name)`, a cache failure is treated like a server failure, and the user may get old data even though the server just returned fresh data.
+
+**Q: Should a failed cache save break the screen?**
+A: It is a design decision. Many teams catch it, log it, and still return the fresh data, because a broken cache should not break the screen. The right choice depends on how important the cache is to the app.
+
+### Tests written
+- returns the remote name and saves it to the cache
+- returns the cached name when the remote source fails
+- rethrows when the remote fails and the cache is empty
+
+**Progress score: 36/100**
