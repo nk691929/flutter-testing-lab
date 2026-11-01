@@ -89,3 +89,74 @@ A: It is a design decision. Many teams catch it, log it, and still return the fr
 - rethrows when the remote fails and the cache is empty
 
 **Progress score: 36/100**
+
+
+
+## Lesson 08: Testing a Cubit with bloc_test
+- Learned: A Cubit holds state and changes it with `emit()`. `blocTest` replaces manual setup: `build` creates a fresh Cubit, `act` calls its methods, `expect` lists the states it should emit in order, `setUp` prepares mocks for that test, and `verify` checks calls afterwards. The initial state is NOT in the `expect` list, only states emitted after the Cubit is built. A real Cubit emits a sequence (loading, then loaded or error), and I test it by mocking the repository with mocktail. `Equatable` gives states value equality, so `blocTest` can compare them.
+- Struggled with: I changed the Cubit's error message to `'offline'` so my test would pass. But the Cubit catches every Exception, not only network failures, so "offline" would be wrong for other errors. I restored `'Could not load profile'` and fixed the test instead. I also put a test outside its group again, and forgot `const` on a state.
+- Key insight: When a test fails, decide which side is wrong before changing anything. A user-facing message should be true for every case that can produce it, and the test should follow the correct behavior, not the other way round. Also, a state class without a correct `props` makes comparisons meaningless, so a test can pass without checking anything.
+
+### Interview Q&A
+**Q: What is the difference between Cubit and Bloc?**
+A: A Cubit changes state by calling methods that `emit` new states. A Bloc receives events and maps them to states. Cubit is simpler and has less code, and Bloc is more structured when I want to track every event.
+
+**Q: How do you test a Cubit?**
+A: With `blocTest`. I mock its dependencies (usually a repository), call the method in `act`, and list the exact states it should emit, in order, in `expect`.
+
+**Q: Why isn't the initial state in the `expect` list?**
+A: `blocTest` only lists states emitted after the Cubit is created. I test the initial state separately with a plain test: `expect(cubit.state, const ProfileInitial())`.
+
+**Q: Why do Bloc states usually extend Equatable?**
+A: `blocTest` and Bloc itself compare states with `==`. Without value equality, two objects with identical data are different instances, so tests fail even when the output is right, and Bloc may rebuild the UI when nothing really changed.
+
+**Q: What does `blocTest`'s `setUp` do, and how is it different from the group's `setUp`?**
+A: It prepares things for that single test only, such as `when(...)` stubs on mocks. The group's `setUp` runs before every test in the group.
+
+**Q: Why mock the repository when testing a Cubit?**
+A: I'm testing the Cubit's logic (which states it emits), not the network or database. A mock keeps the test fast and deterministic, and lets me simulate success and failure on demand.
+
+**Q: What would you check if a state class's equality seems broken?**
+A: I'd check its `props` list. If `props` is missing or leaves out a field, two different states look equal and a test can pass without ever checking that field.
+
+### Tests written
+- CounterCubit: initial state is 0, increment emits [1], decrement emits [-1], two increments emit [1, 2]
+- ProfileCubit: initial state is ProfileInitial
+- ProfileCubit: emits [loading, loaded] when load succeeds
+- ProfileCubit: emits [loading, error] when load fails
+
+**Progress score: 42/100**
+
+## Lesson 09: Widget tests (find, tap, expect)
+- Learned: A widget test builds a widget in a fake screen and checks what the user sees and does. The steps are: `pumpWidget` (build), `tester.tap` (act), `tester.pump` (redraw one frame), then `expect(find..., findsOneWidget)`. I wrap the widget in `MaterialApp` because `Scaffold` needs the Material environment above it.
+- Struggled with: I predicted that removing `pump()` meant no widget was open. In fact the widget is built and the tap happens, but `setState` only marks the widget for a redraw and a test only draws a frame when I call `pump()`. The failure said `Found 0 widgets with text "Count: 1"`. I also gave two buttons the same tooltip and misspelled the group name.
+- Key insight: In a widget test, a correct app can still fail because the check ran before the screen updated. After every action that changes the UI, call `pump()` before checking.
+
+### Interview Q&A
+**Q: What is the difference between a unit test and a widget test?**
+A: A unit test checks logic in plain Dart code. A widget test builds a widget in a simulated screen, then finds widgets, taps them, and checks what changed on the screen, all without a device or emulator.
+
+**Q: What does `tester.pump()` do, and why do you need it?**
+A: It makes Flutter draw one new frame. `setState` only marks a widget as needing a rebuild, so after a tap I call `pump()` and then check the result.
+
+**Q: What is the difference between `pump()` and `pumpAndSettle()`?**
+A: `pump()` draws one frame. `pumpAndSettle()` keeps drawing frames until all animations finish. I use `pump()` by default because it is faster and more predictable, and `pumpAndSettle()` when an animation or navigation transition has to complete first.
+
+**Q: Why wrap the widget in `MaterialApp` in the test?**
+A: Widgets like `Scaffold` and `Text` need things provided higher up the tree, such as theme, text direction, and navigation. Without `MaterialApp` the test can crash for reasons unrelated to my widget.
+
+**Q: What does `findsOneWidget` mean, and what are the others?**
+A: It is a matcher meaning exactly one match was found. Others are `findsNothing`, `findsNWidgets(n)`, and `findsWidgets` (at least one).
+
+**Q: How do you avoid repeating the same setup in widget tests?**
+A: I move the common `pumpWidget` call into a small helper function at the bottom of the test file, so I only change it in one place.
+
+**Q: Why can a widget test pass while the app still has a bug?**
+A: Widget tests run in a simulated environment. For example, two `FloatingActionButton`s with the same default hero tag only throw an error when navigating between screens, which my widget tests never did.
+
+### Tests written
+- shows Count: 0 at the start
+- shows Count: 1 after tapping the add button
+- shows Count: -1 after tapping the remove button
+
+**Progress score: 46/100**
