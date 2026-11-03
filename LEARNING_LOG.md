@@ -160,3 +160,35 @@ A: Widget tests run in a simulated environment. For example, two `FloatingAction
 - shows Count: -1 after tapping the remove button
 
 **Progress score: 46/100**
+
+## Lesson 10: Widget tests with a mocked Cubit
+- Learned: To test a screen that uses a Cubit, I mock the Cubit (`MockCubit<State>` from bloc_test), set its state with `when(() => cubit.state).thenReturn(...)`, and give it to the page with `BlocProvider.value`. Then the test only checks: given this state, does the screen show the right thing? For a button, I use `verify(() => cubit.load()).called(1)` to prove the page asked the Cubit to act.
+- Struggled with: `find.text('Noshad')` found nothing because `find.text` matches the whole string, and the screen shows `'Hello, Noshad'`. I also turned the page into a StatefulWidget with an empty State, which adds code for no reason.
+- Key insight: Each layer is tested on its own. The Cubit test checks which states are emitted, the widget test checks what each state looks like and what a tap asks for. A mock Cubit never changes state on its own, so a tap test checks the call, not the screen.
+
+### Interview Q&A
+**Q: Why mock the Cubit in a widget test instead of using the real one?**
+A: I am testing the UI layer. A mock lets me put the screen in any state instantly, with no timing, network, or repository, and the Cubit's logic already has its own tests.
+
+**Q: How do you provide a Cubit to a widget in a test?**
+A: I wrap the page in `BlocProvider<MyCubit>.value(value: mockCubit, child: ...)` inside a `MaterialApp`, the same way the real app provides the real Cubit.
+
+**Q: How do you test that a button tap triggers an action?**
+A: I stub the method with `when(() => cubit.load()).thenAnswer((_) async {})`, tap the button, call `pump()`, and use `verify(() => cubit.load()).called(1)`. I verify the call because a mock Cubit never emits a new state by itself.
+
+**Q: What does `find.text` match?**
+A: The whole string exactly. For a partial match I use `find.textContaining`.
+
+**Q: Why use a sealed class for states?**
+A: With a `switch` over a sealed class, Dart checks that I handle every state and gives a compile error if I forget one, so a new state cannot silently go unhandled in the UI.
+
+**Q: Should a widget use StatefulWidget when a Cubit holds the state?**
+A: No. If the widget has no state of its own, StatelessWidget is enough. An empty State class is noise.
+
+### Tests written
+- shows a spinner while loading
+- shows the name when loaded
+- shows the error message when loading failed
+- tapping Retry calls load on the cubit
+
+**Progress score: 50/100**
